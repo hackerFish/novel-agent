@@ -152,9 +152,9 @@ export function QualityPanel({ bookId }: { bookId: string }) {
         </span>
       </div>
 
-      {/* AI 味逐句定位 */}
+      {/* 去 AI 味定位 */}
       <div className="form-row" style={{ marginTop: '0.75rem', flexWrap: 'wrap' }}>
-        <label className="label" style={{ marginRight: '0.5rem' }}>🤖 AI 味定位（第</label>
+        <label className="label" style={{ marginRight: '0.5rem' }}>🔍 去 AI 味定位（第</label>
         <input className="input" type="number" min={1} value={aiChapter} onChange={(e) => setAiChapter(Number(e.target.value))} style={{ width: 70 }} />
         <label className="label" style={{ margin: '0 0.5rem 0 0.25rem' }}>章）</label>
         <button className="btn" onClick={runAiIndex} disabled={aiLoading || !bookId}>
@@ -162,7 +162,7 @@ export function QualityPanel({ bookId }: { bookId: string }) {
         </button>
         {aiIndex && (
           <span style={{ marginLeft: '0.75rem', fontSize: '0.85rem', color: aiIndex.index >= 8.5 ? '#4caf50' : aiIndex.index >= 7 ? '#f5a623' : '#c3272b' }}>
-            AI 味指数 {aiIndex.index}/10（{aiIndex.level}）· 问题句 {aiIndex.problemCount}/{aiIndex.sentenceCount}
+            去 AI 味指数 {aiIndex.index}/10（{aiIndex.level}）· 问题句 {aiIndex.problemCount}/{aiIndex.sentenceCount}
           </span>
         )}
       </div>
