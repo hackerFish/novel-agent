@@ -13,6 +13,7 @@ import { buildChapterOutlinePrompt } from '../writer/directorOutline.js';
 import { chat } from '../llm/adapter.js';
 import { thirdPartyReviewChapter } from '../writer/thirdPartyReview.js';
 import { runAutoRepair, localRepair, checkMetaphorDensity } from '../writer/autoRepair.js';
+import { runBookPolish } from '../writer/bookPolish.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BOOKS_DIR = path.join(__dirname, '..', '..', '.t-book-books');
@@ -474,6 +475,62 @@ bookRouter.get('/auto-repair/status', (req, res) => {
   try {
     const bookId = safeBookId(String(req.query.bookId || ''));
     res.json({ ok: true, task: bookId ? repairTasks.get(bookId) || null : null });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/* ========== 整书打磨（书级审查，全本完成后） ========== */
+const polishTasks = new Map();
+
+bookRouter.post('/polish', (req, res) => {
+  try {
+    const bookId = safeBookId(req.body?.bookId);
+    if (!bookId) return res.status(400).json({ ok: false, error: '缺少 bookId' });
+    const exist = polishTasks.get(bookId);
+    if (exist?.running) return res.json({ ok: true, alreadyRunning: true, task: exist });
+
+    const task = { bookId, running: true, message: '整书打磨中…', result: null, startedAt: new Date().toISOString() };
+    polishTasks.set(bookId, task);
+
+    (async () => {
+      try {
+        const project = loadProject(bookId);
+        const dir = chDir(bookId);
+        const files = fs.existsSync(dir)
+          ? fs.readdirSync(dir).filter((f) => f.endsWith('.txt') && !f.startsWith('_')).sort((a, b) => Number(a) - Number(b))
+          : [];
+        const chapters = {};
+        for (const f of files) chapters[Number(f.replace('.txt', ''))] = fs.readFileSync(path.join(dir, f), 'utf8');
+        task.message = `整书打磨中（${files.length} 章抽样审查）…`;
+        const result = await runBookPolish({
+          bookId,
+          project,
+          chapters,
+          total: files.length,
+          directorOutline: project.directorOutline || '',
+        });
+        task.result = result;
+        task.message = result.ok ? '整书打磨完成' : '打磨失败';
+      } catch (e) {
+        task.result = { ok: false, error: e.message };
+        task.message = '打磨异常';
+      } finally {
+        task.running = false;
+        task.finishedAt = new Date().toISOString();
+      }
+    })();
+
+    res.json({ ok: true, task });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+bookRouter.get('/polish/status', (req, res) => {
+  try {
+    const bookId = safeBookId(String(req.query.bookId || ''));
+    res.json({ ok: true, task: bookId ? polishTasks.get(bookId) || null : null });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }

@@ -2388,6 +2388,7 @@ export async function generateChapter(opts, humanizeStrength = 0.7, pipelineOpts
         chapterOutline: opts.chapterOutline,
         abilitySection: opts.abilitySection,
         foreshadowSection: opts.foreshadowSection,
+        characterProfilesSection: opts.characterProfilesSection,
       })
     : buildNextChapterPrompt({
         novelNumber: opts.chapterNumber,
@@ -2409,6 +2410,7 @@ export async function generateChapter(opts, humanizeStrength = 0.7, pipelineOpts
         chapterOutline: opts.chapterOutline,
         abilitySection: opts.abilitySection,
         foreshadowSection: opts.foreshadowSection,
+        characterProfilesSection: opts.characterProfilesSection,
       });
   prompt += '\n\n【去AI句式要求】少用“不是……也不是……而是……”“不是……而是……”这类模板化对照句，尤其不要用来描写笑、哭、眼神、语气、反应、感觉。情绪尽量写动作和细节，例如“他嘴角扯了一下，像早就料到会这样”，不要写成“不是苦笑，也不是气笑，而是那种……”。';
 

@@ -6,6 +6,7 @@ import {
   updateGlobalSummary,
   updateCharacterState,
 } from '../writer/generator.js';
+import { extractCharacterUpdates } from './characterExtract.js';
 
 /**
  * 单章完整 pipeline：生成 → 一致性（可选）→ Step4 定稿（可选）
@@ -119,6 +120,14 @@ export async function runChapterPipeline(body, onProgress) {
     characters = nextCharacters;
   }
 
+  // 角色档案增量提取（bookId 存在时，flash 模型，省 token）
+  let characterExtract = null;
+  if (body.bookId && typeof body.bookId === 'string' && /^[a-zA-Z0-9_-]+$/.test(body.bookId)) {
+    try {
+      characterExtract = await extractCharacterUpdates(body.bookId, chapterText, body.novelNumber || 0, body.totalChapters || 0);
+    } catch { /* 提取失败不影响主流程 */ }
+  }
+
   onProgress?.({ stage: 'done', percent: 100, message: '完成' });
 
   return {
@@ -129,6 +138,7 @@ export async function runChapterPipeline(body, onProgress) {
     quality: generated.quality,
     consistencyReview,
     consistencyRepair,
+    characterExtract,
     messages: generated.exchange || [],
   };
 }

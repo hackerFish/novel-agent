@@ -182,7 +182,7 @@ ${trimToCharLimit(invalidContent || '', CAP.invalidContent)}
 
 // ========== Step3 章节正文（首章 vs 后续章） ==========
 export function buildFirstChapterPrompt(opts) {
-  const { title, chapterRole, chapterPurpose, chapterSummary, novelSetting, wordNumber = 2000, userGuidance, voiceCard, topic, chapterOutline, abilitySection, foreshadowSection } = opts;
+  const { title, chapterRole, chapterPurpose, chapterSummary, novelSetting, wordNumber = 2000, userGuidance, voiceCard, topic, chapterOutline, abilitySection, foreshadowSection, characterProfilesSection } = opts;
   const minWordNumber = Math.floor((wordNumber || 2000) * 0.96);
   const voiceSection = formatVoiceSection(voiceCard);
   const keyHint = buildKeyChapterHint(1, { topic: opts.topic, setting: novelSetting });
@@ -205,7 +205,7 @@ ${FANQIE_READABILITY_RULES}
 
 ${TOMATO_RHYTHM_RULES}
 
-${outlineSection ? `${outlineSection}\n\n` : ''}${abilitySection ? `${abilitySection}\n\n` : ''}${foreshadowSection ? `${foreshadowSection}\n\n` : ''}
+${outlineSection ? `${outlineSection}\n\n` : ''}${abilitySection ? `${abilitySection}\n\n` : ''}${foreshadowSection ? `${foreshadowSection}\n\n` : ''}${characterProfilesSection ? `${characterProfilesSection}\n\n` : ''}
 请完成第 1 章正文，约 ${wordNumber} 字，最低不少于 ${minWordNumber} 字；未写够前不要收尾。要求：
 - 黄金第一段：前 3 句内制造一个信息差 + 危机/反差（参考结构：悬置危机/身份反差/结局倒挂/金手指激活/日常爆破），让读者必须往下看。
 - 第 300 字内引爆冲突；本章末前亮出金手指（系统/重生/异能/祖传宝物等），并留章尾钩。
@@ -222,7 +222,7 @@ export function buildNextChapterPrompt(opts) {
     novelNumber, title, chapterRole, chapterPurpose, chapterSummary,
     globalSummary, previousExcerpt, characterState, outlineWindow, novelSetting,
     nextChapterTitle, nextChapterSummary,
-    wordNumber = 2000, userGuidance, voiceCard, topic, chapterOutline, abilitySection, foreshadowSection,
+    wordNumber = 2000, userGuidance, voiceCard, topic, chapterOutline, abilitySection, foreshadowSection, characterProfilesSection,
   } = opts;
   const minWordNumber = Math.floor((wordNumber || 2000) * 0.96);
   const voiceSection = formatVoiceSection(voiceCard);
@@ -265,6 +265,8 @@ export function buildNextChapterPrompt(opts) {
     abilitySection || '',
     '',
     foreshadowSection || '',
+    '',
+    characterProfilesSection || '',
     '',
     `请完成第 ${novelNumber} 章正文，约 ${wordNumber} 字，最低不少于 ${minWordNumber} 字；未写够前不要收尾。内容需与前文摘要、上章结尾衔接流畅，并为下一章留出空间。不要提前收尾，不要只写剧情梗概；必须把动作、对话、环境压力、系统/弹幕反应和人物选择写成完整场景。当前章必须有明确推进：至少写出一个可见的小目标、一个阻碍、一个反馈或反转，并在结尾留下下一步钩子——从八种章尾钩中选一种收尾（悬念/危机/反转/打脸预告/关系/升级/信息/倒计时），在“即将揭晓”的前一秒断章。必须使用规范中文标点与自然分段，情绪爆发也要有清晰断句，不要连续 24 字以上无标点，单段尽量控制在 80-180 字。系统面板、任务提示等【...】内容必须单独成行，不要在】前后追加标点；不要使用 Markdown 加粗符号 **。仅返回正文，不要章节标题、Markdown、作者说。${keyHint ? `\n\n${keyHint}` : ''}${userGuidance ? `\n\n本章指导：${userGuidance}` : ''}`,
   ];

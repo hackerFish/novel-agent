@@ -17,7 +17,7 @@ import { runChapterPipeline } from '../writer/chapterPipeline.js';
 import { LINZHAO_VOICE_CARD, resolveVoiceCard } from '../writer/voiceCard.js';
 import { chat } from '../llm/adapter.js';
 import { buildDirectorOutlinePrompt, buildChapterOutlinePrompt } from '../writer/directorOutline.js';
-import { formatAbilitySection, formatForeshadowSection } from '../writer/bookState.js';
+import { formatAbilitySection, formatForeshadowSection, formatCharacterProfilesSection } from '../writer/bookState.js';
 import { runDeconstruct, getPatterns, formatPatternsSection } from '../writer/deconstruct.js';
 
 /** 从请求注入能力图鉴与伏笔状态（bookId 存在时） */
@@ -30,6 +30,7 @@ function injectBookState(opts) {
       ...opts,
       abilitySection: formatAbilitySection(bookId, chapterNumber) || undefined,
       foreshadowSection: formatForeshadowSection(bookId, chapterNumber) || undefined,
+      characterProfilesSection: formatCharacterProfilesSection(bookId, chapterNumber) || undefined,
     };
   } catch {
     return opts;

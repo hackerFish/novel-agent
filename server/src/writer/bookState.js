@@ -183,3 +183,85 @@ export function autoHarvest(bookId, maxChapter) {
   if (changed) writeState(bookId, 'foreshadows', s);
   return s.list.filter((f) => f.status !== 'harvested').length;
 }
+
+/* ========== 角色档案演进（Character Profiles） ========== */
+
+const emptyCharacters = { characters: {}, updatedAt: null };
+
+/** 读取角色档案 */
+export function getCharacterProfiles(bookId) {
+  const s = readState(bookId, 'characters', emptyCharacters);
+  return s.characters && typeof s.characters === 'object' ? s.characters : {};
+}
+
+/**
+ * 增量更新角色档案（pipeline 定稿后调用）
+ */
+export function upsertCharacterProfile(bookId, { name, updates = {}, lastSeenChapter = 0 } = {}) {
+  if (!name) return null;
+  const s = readState(bookId, 'characters', emptyCharacters);
+  const existing = s.characters[name] || {
+    name, appearance: '', personality: '', abilities: [], relationships: {}, arc: [], evolutionPercent: 0,
+    firstSeenChapter: lastSeenChapter || 0, lastSeenChapter: lastSeenChapter || 0,
+  };
+  if (updates.appearance) existing.appearance = updates.appearance;
+  if (updates.personality) existing.personality = updates.personality;
+  if (Array.isArray(updates.abilities)) {
+    existing.abilities = [...new Set([...(existing.abilities || []), ...updates.abilities])];
+  }
+  if (updates.relationships && typeof updates.relationships === 'object') {
+    existing.relationships = { ...(existing.relationships || {}), ...updates.relationships };
+  }
+  if (updates.arcNote) {
+    existing.arc = existing.arc || [];
+    if (!existing.arc.includes(updates.arcNote)) existing.arc.push(updates.arcNote);
+  }
+  if (lastSeenChapter) existing.lastSeenChapter = lastSeenChapter;
+  if (!existing.firstSeenChapter) existing.firstSeenChapter = lastSeenChapter || 0;
+  s.characters[name] = existing;
+  s.updatedAt = new Date().toISOString();
+  writeState(bookId, 'characters', s);
+  return existing;
+}
+
+/** 按总进度计算角色形象演进百分比（25/50/75/100） */
+export function evolveCharacterPercentages(bookId, totalChapters) {
+  const chars = getCharacterProfiles(bookId);
+  const s = readState(bookId, 'characters', emptyCharacters);
+  let changed = false;
+  for (const c of Object.values(chars)) {
+    const progress = totalChapters > 0 ? (c.lastSeenChapter || 0) / totalChapters : 0;
+    const percent = progress >= 0.75 ? 100 : progress >= 0.5 ? 75 : progress >= 0.25 ? 50 : progress >= 0.08 ? 25 : 0;
+    if (c.evolutionPercent !== percent) {
+      c.evolutionPercent = percent;
+      changed = true;
+    }
+  }
+  if (changed) { s.updatedAt = new Date().toISOString(); writeState(bookId, 'characters', s); }
+  return chars;
+}
+
+/**
+ * 生成角色档案摘要注入写章 prompt（只给关键信息，省 token）
+ */
+export function formatCharacterProfilesSection(bookId, currentChapter) {
+  const chars = getCharacterProfiles(bookId);
+  const entries = Object.entries(chars);
+  if (!entries.length) return '';
+  const active = entries
+    .filter(([, c]) => currentChapter - (c.lastSeenChapter || 0) <= 5)
+    .sort((a, b) => (b.lastSeenChapter || 0) - (a.lastSeenChapter || 0));
+  const recent = active.slice(0, 6);
+  const lines = recent.map(([name, c]) => {
+    const parts = [];
+    if (c.personality) parts.push(c.personality);
+    if (c.abilities?.length) parts.push(`能力:${c.abilities.join('/')}`);
+    if (c.appearance) parts.push(c.appearance.slice(0, 40));
+    const rel = c.relationships ? Object.entries(c.relationships).map(([k, v]) => `${k}=${v}`).slice(0, 3).join('、') : '';
+    if (rel) parts.push(`关系:${rel}`);
+    return `- ${name}：${parts.join('；')}`;
+  });
+  return lines.length
+    ? `【角色档案】（近 5 章出场角色，保持人设/能力/关系一致）\n${lines.join('\n')}`
+    : '';
+}
