@@ -17,9 +17,15 @@ function splitLongRuns(text, cues) {
  */
 function hardBreakUnpunctuatedRuns(text) {
   let out = String(text || '');
+  // 保护系统面板【...】块：内容不断句（先替换为占位符，最后还原）
+  const blocks = [];
+  out = out.replace(/【[^】]{1,260}】/g, (b) => {
+    blocks.push(b);
+    return `§BLOCK${blocks.length - 1}§`;
+  });
   // 匹配一段连续无标点中文（长度 >= 20），在其后半段找自然断点补句号
   const re = /[一-龥]{20,}/g;
-  return out.replace(re, (run) => {
+  out = out.replace(re, (run) => {
     if (run.length < 20) return run;
     // 第一优先级：感官名词后断（气/光/声/味/色/香/影——名词短语自然结束点）
     // 第二优先级：方位/副词后断（里/处/边/后/地/就/还/也/又）
@@ -43,6 +49,9 @@ function hardBreakUnpunctuatedRuns(text) {
     const rest = run.slice(breakAt);
     return head + '。' + hardBreakUnpunctuatedRuns(rest);
   });
+  // 还原系统面板
+  out = out.replace(/§BLOCK(\d+)§/g, (_, i) => blocks[Number(i)]);
+  return out;
 }
 
 /** 通用断句/分段 cues，不绑定具体书名角色 */
