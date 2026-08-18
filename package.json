@@ -1,0 +1,18 @@
+{
+  "name": "novel-agent",
+  "version": "1.0.0",
+  "description": "执笔 NovelAgent —— 长篇连载创作 Agent：设定→目录→写章→定稿全流程，去 AI 味、长篇一致性、本地模型优先",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "cd client && npm run build",
+    "build:server": "cd server && npm run build",
+    "start": "cd server && npm start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

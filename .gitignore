@@ -1,0 +1,40 @@
+# 依赖与构建
+node_modules/
+dist/
+client/dist/
+server/node_modules/
+
+# 运行时数据与敏感文件（API Key / 番茄登录态 / 书籍数据）
+.t-book-config.json
+.t-book-project.json
+.t-book-fanqie-auth.json
+.t-book-publish-state.json
+.t-book-books/
+.t-book-state/
+server/.t-book-config.json
+server/.t-book-project.json
+server/.t-book-fanqie-auth.json
+server/.t-book-publish-state.json
+server/.t-book-books/
+server/.t-book-state/
+server/.t-book-*
+
+# 工作区辅助与备份
+.codex-run/
+.bak
+*.bak
+*.preformat.bak
+*.preai.bak
+*.prerepair.bak
+*.precliff.bak
+*.preaction.bak
+tmp_*
+!tmp_*.*.js
+
+# 环境
+.env
+.env.local
+*.log
+
+# PID �ļ�
+*.pid
