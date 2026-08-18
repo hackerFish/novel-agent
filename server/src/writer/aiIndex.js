@@ -17,7 +17,11 @@ const FEATURES = [
   { re: /不是[^。！？\n]{0,18}，?(也)?不是[^。！？\n]{0,18}，?而是/g, label: '对照句', weight: 2.0 },
   { re: /像[一-龥]{2,12}/g, label: '比喻密集', weight: 0.8 },
   { re: /[！]{2,}/g, label: '连续感叹号', weight: 1.0 },
+  { re: /还没睡(?!醒)/g, label: '语病（还没睡醒）', weight: 2.0 },
 ];
+
+/** 正常叠词白名单 */
+const NORMAL_DOUBLES = /太太|点点|慢慢|刚刚|偏偏|恰恰|常常|年年|天天|时时|处处|层层|哥哥|姐姐|妹妹|弟弟|星星|奶奶|爷爷|妈妈|爸爸|人人|个个|种种|件件|声声|步步|阵阵|家家|户户|双双|对对|久久|远远|近近|深深|浅浅|高高|矮矮|厚厚|薄薄|宽宽|窄窄|长长|短短/;
 
 /** 单句 AI 味评分（0-10） */
 function scoreSentence(sentence) {
@@ -29,6 +33,13 @@ function scoreSentence(sentence) {
       points += n * f.weight;
       reasons.push(`${f.label}×${n}`);
     }
+  }
+  // 叠字语病（只查虚词叠字：他他/了了/是是——实词叠词如"太太/稀稀"是正常词）
+  const doubleRe = /([他了是就也又在不都还没吧呢啊呀])\1(?=[，。！？])/g;
+  const badDoubles = (sentence.match(doubleRe) || []);
+  if (badDoubles.length) {
+    points += badDoubles.length;
+    reasons.push(`叠字×${badDoubles.length}`);
   }
   // 句长惩罚：>35 字长句（无标点堆叠）
   const chars = sentence.replace(/[。！？!?…，、；：]/g, '').length;

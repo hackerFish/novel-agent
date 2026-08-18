@@ -36,6 +36,9 @@ const AI_WORDS = [
 
 const SYSTEM_LINE_RE = /^\s*【[^】]{2,30}】\s*$/;
 
+/** 正常叠词白名单（太太/点点/慢慢…），排除后才是语病 */
+const NORMAL_DOUBLES = /太太|点点|慢慢|刚刚|偏偏|恰恰|常常|年年|天天|时时|处处|层层|哥哥|姐姐|妹妹|弟弟|星星|奶奶|爷爷|妈妈|爸爸|人人|个个|种种|件件|声声|步步|阵阵|家家|户户|双双|对对|久久|远远|近近|深深|浅浅|高高|矮矮|厚厚|薄薄|宽宽|窄窄|长长|短短/;
+
 /**
  * 单章推流验证分
  * @param {string} text 章节正文
@@ -142,6 +145,10 @@ export function scorePromotion(text, targetChars = 2000) {
     if (/[“"]{1}[”"]/.test(body)) { score -= 1; issues.push('存在空引号对话'); }
     if (chars < targetChars * 0.96) { score -= 2; issues.push(`字数未达标（${chars}/${targetChars}）`); }
     if (/。。|，，|！！|？？/.test(body)) { score -= 1; issues.push('连续标点错误'); }
+    // 常见语病（AI 高频写错）
+    if (/还没睡(?!醒)/.test(body)) { score -= 2; issues.push('语病：应为「还没睡醒」'); }
+    if (/([他了是就也又在不都还没吧呢啊呀])\1(?=[，。！？])/.test(body)) { score -= 1; issues.push('叠字语病（如"他他""了了"）'); }
+    if (/感觉.{0,8}感觉|觉得.{0,8}觉得/.test(body)) { score -= 1; issues.push('「感觉/觉得」重复啰嗦'); }
     // 无标点长句（番茄短句阅读：单句无标点 run 不应超过 24 字）
     const longRuns = (body.match(/[一-龥]{20,}/g) || []).filter((r) => !/[，。！？、；：…]/.test(r)).length;
     if (longRuns > 0) { score -= Math.min(4, longRuns); issues.push(`无标点长句×${longRuns}（>20字连续无标点，需断句）`); }
