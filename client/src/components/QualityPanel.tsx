@@ -134,6 +134,34 @@ export function QualityPanel({ bookId }: { bookId: string }) {
     }
   }
 
+  // 番茄数据看板
+  const [fanqie, setFanqie] = useState<any | null>(null)
+  const [fanqieLoading, setFanqieLoading] = useState(false)
+  const loadFanqie = async () => {
+    setFanqieLoading(true)
+    try {
+      const res = await fetch(`${API}/book/fanqie-data`)
+      const d = await parseJsonResponse(res)
+      setFanqie(d)
+    } catch { /* ignore */ } finally {
+      setFanqieLoading(false)
+    }
+  }
+  const refreshFanqie = async () => {
+    setFanqieLoading(true)
+    setError('')
+    try {
+      const res = await fetch(`${API}/book/fanqie-data/refresh`, { method: 'POST' })
+      const d = await parseJsonResponse(res)
+      if (!d.ok) setError(d.error || '刷新失败')
+      setFanqie(d)
+    } catch (e) {
+      setError((e as Error).message || '刷新失败')
+    } finally {
+      setFanqieLoading(false)
+    }
+  }
+
   return (
     <div className="card">
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -281,6 +309,43 @@ export function QualityPanel({ bookId }: { bookId: string }) {
           )}
         </>
       )}
+
+      {/* 番茄数据看板 */}
+      <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border, #333)', paddingTop: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <h3 style={{ margin: 0 }}>📈 番茄数据看板</h3>
+          <button className="btn" onClick={loadFanqie} disabled={fanqieLoading}>加载缓存</button>
+          <button className="btn primary" onClick={refreshFanqie} disabled={fanqieLoading}>
+            {fanqieLoading ? '抓取中…' : '🔄 刷新数据'}
+          </button>
+          <span className="muted" style={{ fontSize: '0.85rem' }}>
+            登录状态：{fanqie?.loggedIn ? '✅ 已登录' : fanqie ? '❌ 未登录（请在 Step5 点「登录番茄」重新登录）' : '—'}
+          </span>
+        </div>
+        {fanqie?.cached?.loginValid === false && (
+          <p className="error" style={{ fontSize: '0.85rem' }}>
+            番茄登录态已过期，数据抓取需要重新登录：Step5 →「登录番茄」→ 浏览器扫码登录后回来刷新。
+          </p>
+        )}
+        {fanqie?.cached?.books && fanqie.cached.books.length > 0 && (
+          <div style={{ marginTop: '0.5rem', fontSize: '0.88rem' }}>
+            {fanqie.cached.books.map((b: any, i: number) => (
+              <div key={i} style={{ padding: '0.35rem 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <strong>《{b.title}》</strong>
+                <span className="muted" style={{ marginLeft: '0.75rem' }}>{b.numbers.join(' ')}</span>
+              </div>
+            ))}
+            <p className="muted" style={{ fontSize: '0.78rem', marginTop: '0.5rem' }}>
+              抓取时间：{fanqie.cached.fetchedAt?.slice(0, 16).replace('T', ' ')}
+            </p>
+          </div>
+        )}
+        {fanqie?.cached?.books?.length === 0 && (
+          <p className="muted" style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
+            暂无缓存数据（登录后刷新即可抓取阅读/在读/完读/追读数据）。
+          </p>
+        )}
+      </div>
     </div>
   )
 }

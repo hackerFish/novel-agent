@@ -17,6 +17,7 @@ import { runBookPolish } from '../writer/bookPolish.js';
 import { locateAiFlavor } from '../writer/aiIndex.js';
 import { runCommercialPack } from '../writer/commercialPack.js';
 import { listChapterHistory, restoreChapterFile } from '../storage/chapterStorage.js';
+import { fetchFanqieData, getCachedFanqieData, hasFanqieLogin } from '../publish/fanqieData.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BOOKS_DIR = path.join(__dirname, '..', '..', '.t-book-books');
@@ -599,6 +600,24 @@ bookRouter.post('/chapter-restore', (req, res) => {
     const version = String(req.body?.version || '');
     if (!bookId || !chapterNumber || !version) return res.status(400).json({ ok: false, error: '缺少参数' });
     const result = restoreChapterFile(bookId, chapterNumber, version);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/* ========== 番茄作家后台数据看板 ========== */
+bookRouter.get('/fanqie-data', (req, res) => {
+  try {
+    res.json({ ok: true, cached: getCachedFanqieData(), loggedIn: hasFanqieLogin() });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+bookRouter.post('/fanqie-data/refresh', async (req, res) => {
+  try {
+    const result = await fetchFanqieData();
     res.json(result);
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
