@@ -17,9 +17,10 @@ function splitLongRuns(text, cues) {
  */
 function hardBreakUnpunctuatedRuns(text) {
   let out = String(text || '');
-  // 保护系统面板【...】块：内容不断句（先替换为占位符，最后还原）
+  // 保护系统面板【...】块和引号内内容：不断句（先替换为占位符，最后还原）
+  // 引号保护防"定位红点已经和“观察者：0”。重叠"这类把引号内标识切断的错误
   const blocks = [];
-  out = out.replace(/【[^】]{1,260}】/g, (b) => {
+  out = out.replace(/【[^】]{1,260}】|“[^”]{1,120}”|‘[^’]{1,120}’|「[^」]{1,120}」|『[^』]{1,120}』/g, (b) => {
     blocks.push(b);
     return `§BLOCK${blocks.length - 1}§`;
   });
@@ -62,6 +63,17 @@ export function applyLocalFormatPass(text, extraCues = []) {
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 
+  // 引号外多余句号清理：仅当引号内是"标识符风格"（含冒号/数字，如"观察者：0"）且引号后紧接中文时，
+  // 删除引号后的孤立句号，避免"“观察者：0”。重叠"被切成两段（系统标识应视为整体）
+  normalized = normalized.replace(/“[^”\n]{1,40}[:：][^”\n]{0,30}”。(?=[一-龥])/gu, (m) => m.slice(0, -1));
+
+  // 保护"标识符引号"块（如"观察者：0"）：内容含冒号/数字，视为整体，不被后续分段规则切开
+  const idQuotes = [];
+  normalized = normalized.replace(/“[^”\n]{1,40}[:：][^”\n]{0,30}”/g, (q) => {
+    idQuotes.push(q);
+    return `§IDQ${idQuotes.length - 1}§`;
+  });
+
   const genericCues = [
     '但', '可', '而', '忽然', '突然', '这时', '下一秒', '片刻后', '随后', '紧接着', '与此同时',
     ...extraCues,
@@ -69,9 +81,17 @@ export function applyLocalFormatPass(text, extraCues = []) {
   normalized = splitLongRuns(normalized, genericCues);
   normalized = hardBreakUnpunctuatedRuns(normalized);
 
-  return normalized
+  normalized = normalized
     .replace(/([】”’」』])(?=[“‘「『一-龥])/gu, '$1\n\n')
     .replace(/([。！？!?…])(?=[“‘「『【一-龥])/gu, '$1\n\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+
+  // 标识符引号是句子成分：删除其后被分段规则切出的换行，让标识符与谓语/补语相连
+  // （如"定位红点已经和“观察者：0”\n\n重叠" → "定位红点已经和“观察者：0”重叠"）
+  normalized = normalized.replace(/§IDQ(\d+)§\n{2,}(?=[一-龥])/g, (_, i) => `§IDQ${i}§`);
+
+  // 还原标识符引号
+  normalized = normalized.replace(/§IDQ(\d+)§/g, (_, i) => idQuotes[Number(i)]);
+  return normalized;
 }

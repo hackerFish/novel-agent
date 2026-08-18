@@ -19,6 +19,7 @@ import { chat } from '../llm/adapter.js';
 import { buildDirectorOutlinePrompt, buildChapterOutlinePrompt } from '../writer/directorOutline.js';
 import { formatAbilitySection, formatForeshadowSection, formatCharacterProfilesSection } from '../writer/bookState.js';
 import { runDeconstruct, getPatterns, formatPatternsSection } from '../writer/deconstruct.js';
+import { getLessons, addLesson, removeLesson, formatLessonsSection, seedDefaultLessons } from '../writer/lessons.js';
 
 /** 从请求注入能力图鉴与伏笔状态（bookId 存在时） */
 function injectBookState(opts) {
@@ -32,6 +33,7 @@ function injectBookState(opts) {
       foreshadowSection: formatForeshadowSection(bookId, chapterNumber) || undefined,
       characterProfilesSection: formatCharacterProfilesSection(bookId, chapterNumber) || undefined,
       patternsSection: opts.injectPatterns === false ? undefined : (formatPatternsSection(getPatterns(), 2) || undefined),
+      lessonsSection: formatLessonsSection(5) || undefined,
     };
   } catch {
     return opts;
@@ -365,6 +367,43 @@ workflowRouter.get('/patterns/section', (req, res) => {
   try {
     const max = Number(req.query.max) || 3;
     res.json({ ok: true, section: formatPatternsSection(getPatterns(), max) });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/* ========== 问题台账（教训库，防再犯） ========== */
+workflowRouter.get('/lessons', (req, res) => {
+  try {
+    res.json({ ok: true, lessons: getLessons() });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/** 记录一条问题（审查/检测/人工发现后调用） */
+workflowRouter.post('/lessons', (req, res) => {
+  try {
+    const item = addLesson(req.body || {});
+    res.json({ ok: true, lesson: item });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/** 删除一条 */
+workflowRouter.delete('/lessons/:id', (req, res) => {
+  try {
+    res.json(removeLesson(req.params.id));
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/** 初始化预置问题（幂等） */
+workflowRouter.post('/lessons/seed', (req, res) => {
+  try {
+    res.json({ ok: true, ...seedDefaultLessons() });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
