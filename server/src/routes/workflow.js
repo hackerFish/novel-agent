@@ -18,6 +18,7 @@ import { LINZHAO_VOICE_CARD, resolveVoiceCard } from '../writer/voiceCard.js';
 import { chat } from '../llm/adapter.js';
 import { buildDirectorOutlinePrompt, buildChapterOutlinePrompt } from '../writer/directorOutline.js';
 import { formatAbilitySection, formatForeshadowSection } from '../writer/bookState.js';
+import { runDeconstruct, getPatterns, formatPatternsSection } from '../writer/deconstruct.js';
 
 /** 从请求注入能力图鉴与伏笔状态（bookId 存在时） */
 function injectBookState(opts) {
@@ -329,6 +330,39 @@ workflowRouter.post('/outline/chapter', async (req, res) => {
       { maxTokens: 3072, temperature: 0.5, model: 'aux' }
     );
     res.json({ ok: true, outline: content, messages: exchange });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/* ========== 拆书分析（爆款逆向 → 写法库） ========== */
+
+/** 拆书：输入书名/简介/章节样本 → 结构化拆解 → 存写法库 */
+workflowRouter.post('/deconstruct', async (req, res) => {
+  try {
+    const { book, intro, sampleText, save = true } = req.body || {};
+    if (!book) return res.status(400).json({ ok: false, error: '缺少书名' });
+    const result = await runDeconstruct({ book, intro, sampleText, save: save !== false });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/** 查询写法库 */
+workflowRouter.get('/patterns', (req, res) => {
+  try {
+    res.json({ ok: true, patterns: getPatterns() });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/** 写法库摘要（可注入写章 prompt） */
+workflowRouter.get('/patterns/section', (req, res) => {
+  try {
+    const max = Number(req.query.max) || 3;
+    res.json({ ok: true, section: formatPatternsSection(getPatterns(), max) });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }

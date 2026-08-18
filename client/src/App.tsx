@@ -8,6 +8,7 @@ import { Step4Finalize } from './components/Step4Finalize'
 import { Step5Publish } from './components/Step5Publish'
 import { ProductionCenter } from './components/ProductionCenter'
 import { QualityPanel } from './components/QualityPanel'
+import { DeconstructPanel } from './components/DeconstructPanel'
 import { ConversationPanel } from './components/ConversationPanel'
 import type { ConversationMessage } from './components/ConversationPanel'
 import './App.css'
@@ -577,7 +578,11 @@ export default function App() {
           />
         )}
         {step === 6 && (
-          <QualityPanel bookId={currentBookId} />
+          <>
+            <DeconstructPanel />
+            <div style={{ height: '1rem' }} />
+            <QualityPanel bookId={currentBookId} />
+          </>
         )}
           </div>
         </div>
