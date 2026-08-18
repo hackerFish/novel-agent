@@ -89,6 +89,51 @@ export function QualityPanel({ bookId }: { bookId: string }) {
     }
   }
 
+  // AI 味逐句定位
+  const [aiIndex, setAiIndex] = useState<{ index: number; level: string; problemCount: number; sentenceCount: number; sentences: { text: string; score: number; reasons: string[] }[] } | null>(null)
+  const [aiChapter, setAiChapter] = useState(1)
+  const [aiLoading, setAiLoading] = useState(false)
+  const runAiIndex = async () => {
+    setAiLoading(true)
+    setError('')
+    try {
+      const res = await fetch(`${API}/book/ai-index`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookId, chapterNumber: aiChapter }),
+      })
+      const d = await parseJsonResponse(res)
+      if (!d.ok) throw new Error(d.error || '定位失败')
+      setAiIndex(d)
+    } catch (e) {
+      setError((e as Error).message || '定位失败')
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  // 商业化三件套
+  const [pack, setPack] = useState<any | null>(null)
+  const [packLoading, setPackLoading] = useState(false)
+  const runPack = async () => {
+    setPackLoading(true)
+    setError('')
+    try {
+      const res = await fetch(`${API}/book/commercial-pack`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookId }),
+      })
+      const d = await parseJsonResponse(res)
+      if (!d.ok) throw new Error(d.error || '生成失败')
+      setPack(d.pack)
+    } catch (e) {
+      setError((e as Error).message || '生成失败')
+    } finally {
+      setPackLoading(false)
+    }
+  }
+
   return (
     <div className="card">
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -99,10 +144,66 @@ export function QualityPanel({ bookId }: { bookId: string }) {
         <button className="btn" onClick={runPromo} disabled={promoLoading || !bookId}>
           {promoLoading ? '计算中…' : promo ? '重新计算' : '🎯 推流验证分'}
         </button>
+        <button className="btn" onClick={runPack} disabled={packLoading || !bookId}>
+          {packLoading ? '生成中…' : '📦 商业化三件套'}
+        </button>
         <span className="muted" style={{ fontSize: '0.85rem' }}>
           番茄分 ≥8.5 优秀 / 8.2-8.5 良好 / 7.8-8.2 需关注 / &lt;7.8 建议重写
         </span>
       </div>
+
+      {/* AI 味逐句定位 */}
+      <div className="form-row" style={{ marginTop: '0.75rem', flexWrap: 'wrap' }}>
+        <label className="label" style={{ marginRight: '0.5rem' }}>🤖 AI 味定位（第</label>
+        <input className="input" type="number" min={1} value={aiChapter} onChange={(e) => setAiChapter(Number(e.target.value))} style={{ width: 70 }} />
+        <label className="label" style={{ margin: '0 0.5rem 0 0.25rem' }}>章）</label>
+        <button className="btn" onClick={runAiIndex} disabled={aiLoading || !bookId}>
+          {aiLoading ? '分析中…' : '定位 AI 味句子'}
+        </button>
+        {aiIndex && (
+          <span style={{ marginLeft: '0.75rem', fontSize: '0.85rem', color: aiIndex.index >= 8.5 ? '#4caf50' : aiIndex.index >= 7 ? '#f5a623' : '#c3272b' }}>
+            AI 味指数 {aiIndex.index}/10（{aiIndex.level}）· 问题句 {aiIndex.problemCount}/{aiIndex.sentenceCount}
+          </span>
+        )}
+      </div>
+      {aiIndex && aiIndex.sentences.length > 0 && (
+        <div style={{ maxHeight: 220, overflowY: 'auto', margin: '0.5rem 0', fontSize: '0.82rem' }}>
+          {aiIndex.sentences.map((s, i) => (
+            <div key={i} style={{ padding: '0.25rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <span style={{ color: s.score >= 3 ? '#c3272b' : '#f5a623', fontWeight: 600 }}>[{s.score}]</span>{' '}
+              {s.text.slice(0, 80)}
+              {s.text.length > 80 ? '…' : ''}
+              <span className="muted" style={{ marginLeft: '0.5rem' }}>{s.reasons.join('、')}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 商业化三件套 */}
+      {pack && (
+        <div style={{ margin: '0.75rem 0', padding: '0.75rem 1rem', borderRadius: 8, border: '1px solid var(--border, #333)' }}>
+          <h3 style={{ margin: '0 0 0.5rem' }}>📦 商业化三件套</h3>
+          <div style={{ fontSize: '0.9rem' }}>
+            <strong>书名候选：</strong>
+            {(pack.titles || []).map((t: any, i: number) => (
+              <div key={i} style={{ margin: '0.2rem 0' }}>
+                <span style={{ fontWeight: 600 }}>{t.title}</span>
+                <span className="muted" style={{ marginLeft: '0.5rem', fontSize: '0.82rem' }}>{t.reason}</span>
+              </div>
+            ))}
+            {pack.recommendedTitle && <p style={{ margin: '0.4rem 0' }}>✅ 推荐：{pack.recommendedTitle}</p>}
+            <strong style={{ display: 'block', marginTop: '0.5rem' }}>简介：</strong>
+            {(pack.intros || []).map((it: any, i: number) => (
+              <div key={i} style={{ margin: '0.3rem 0', fontSize: '0.85rem' }}>
+                <strong>{it.version}：</strong>{it.text}
+              </div>
+            ))}
+            <strong style={{ display: 'block', marginTop: '0.5rem' }}>标签：</strong>
+            <span>{(pack.tags || []).map((t: string) => `#${t}`).join(' ')}</span>
+            {pack.marketingAngle && <p style={{ margin: '0.4rem 0', fontSize: '0.85rem' }}>营销角度：{pack.marketingAngle}</p>}
+          </div>
+        </div>
+      )}
 
       {promo?.summary && (
         <div style={{ margin: '0.75rem 0', padding: '0.75rem 1rem', borderRadius: 8, border: `1px solid ${promo.summary.fullMark ? '#4caf5055' : '#f5a62355'}` }}>

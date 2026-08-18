@@ -31,6 +31,7 @@ function injectBookState(opts) {
       abilitySection: formatAbilitySection(bookId, chapterNumber) || undefined,
       foreshadowSection: formatForeshadowSection(bookId, chapterNumber) || undefined,
       characterProfilesSection: formatCharacterProfilesSection(bookId, chapterNumber) || undefined,
+      patternsSection: opts.injectPatterns === false ? undefined : (formatPatternsSection(getPatterns(), 2) || undefined),
     };
   } catch {
     return opts;

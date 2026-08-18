@@ -14,6 +14,8 @@ import { chat } from '../llm/adapter.js';
 import { thirdPartyReviewChapter } from '../writer/thirdPartyReview.js';
 import { runAutoRepair, localRepair, checkMetaphorDensity } from '../writer/autoRepair.js';
 import { runBookPolish } from '../writer/bookPolish.js';
+import { locateAiFlavor } from '../writer/aiIndex.js';
+import { runCommercialPack } from '../writer/commercialPack.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BOOKS_DIR = path.join(__dirname, '..', '..', '.t-book-books');
@@ -531,6 +533,47 @@ bookRouter.get('/polish/status', (req, res) => {
   try {
     const bookId = safeBookId(String(req.query.bookId || ''));
     res.json({ ok: true, task: bookId ? polishTasks.get(bookId) || null : null });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/* ========== AI 味指数逐句定位（本地，0 token） ========== */
+bookRouter.post('/ai-index', (req, res) => {
+  try {
+    const bookId = safeBookId(req.body?.bookId);
+    const chapterNumber = Number(req.body?.chapterNumber);
+    if (!bookId || !chapterNumber) return res.status(400).json({ ok: false, error: '缺少 bookId/chapterNumber' });
+    const f = path.join(chDir(bookId), `${chapterNumber}.txt`);
+    if (!fs.existsSync(f)) return res.status(404).json({ ok: false, error: `第 ${chapterNumber} 章不存在` });
+    const text = fs.readFileSync(f, 'utf8');
+    const result = locateAiFlavor(text);
+    res.json({ ok: true, chapterNumber, ...result });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/* ========== 商业化三件套（书名/简介/标签） ========== */
+bookRouter.post('/commercial-pack', async (req, res) => {
+  try {
+    const bookId = safeBookId(req.body?.bookId);
+    if (!bookId) return res.status(400).json({ ok: false, error: '缺少 bookId' });
+    const project = loadProject(bookId);
+    // 黄金三章拼接（前 3 章开头）
+    let goldenChapters = '';
+    for (const n of [1, 2, 3]) {
+      const f = path.join(chDir(bookId), `${n}.txt`);
+      if (fs.existsSync(f)) goldenChapters += `【第${n}章】${fs.readFileSync(f, 'utf8').slice(0, 800)}\n\n`;
+    }
+    const result = await runCommercialPack({
+      topic: project.topic || '',
+      genre: project.genre || '',
+      setting: project.setting || '',
+      goldenChapters,
+      existingTitle: project.topic?.split('\n')[0]?.slice(0, 20) || '',
+    });
+    res.json(result);
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
