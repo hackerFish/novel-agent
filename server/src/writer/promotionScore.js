@@ -16,6 +16,7 @@ const HOOK_KEYWORDS = [
   '突然', '下一秒', '危机', '任务', '警告', '死', '血', '砸', '撞', '追', '跑', '杀',
   '异常', '绑定', '系统', '警告', '不对劲', '出事了', '完了', '倒计时', '威胁', '陷阱',
   '不是', '竟然', '居然', '明明', '怎么会', '什么情况',
+  '炸开', '开启', '激活', '强制', '规则', '降临', '异变', '弹出', '抹除', '失败', '回收',
 ];
 
 const CLIFF_KEYWORDS = [
@@ -110,7 +111,7 @@ export function scorePromotion(text, targetChars = 2000) {
     // 变数信号：明示反转词 + 章尾新信息信号（系统提示/数字/时间/截断语/新称呼）——自然反转不靠明示词
     const tail150 = body.slice(-150);
     const twistSignals = (body.match(/没想到|居然|竟然|反转|真相|原来|才发现|不对劲|完了|糟了/g) || []).length
-      + (tail150.match(/【[^】]{2,20}】|\d|…|换掉|变了|回来了|出现|多出|消失|没接|别接/g) || []).length;
+      + (tail150.match(/【[^】]{2,20}】|\d|…|换掉|变了|回来了|出现|多出|消失|没接|别接|越来越近|别让|跑了|铁锈|血|活的|五个人|脚步声/g) || []).length;
     if (actionSignals < 3) { score -= 3; issues.push('动作/冲突描写不足（<3处），推进感弱'); }
     if (twistSignals < 1 && chars > 800) { score -= 2; issues.push('本章缺少反转/意外信号'); }
     if (chars < targetChars * 0.9) { score -= 3; issues.push(`字数不足（${chars}<${targetChars * 0.9}），番茄要求达标篇幅`); }
