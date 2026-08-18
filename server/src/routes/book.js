@@ -16,6 +16,7 @@ import { runAutoRepair, localRepair, checkMetaphorDensity } from '../writer/auto
 import { runBookPolish } from '../writer/bookPolish.js';
 import { locateAiFlavor } from '../writer/aiIndex.js';
 import { runCommercialPack } from '../writer/commercialPack.js';
+import { listChapterHistory, restoreChapterFile } from '../storage/chapterStorage.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BOOKS_DIR = path.join(__dirname, '..', '..', '.t-book-books');
@@ -573,6 +574,31 @@ bookRouter.post('/commercial-pack', async (req, res) => {
       goldenChapters,
       existingTitle: project.topic?.split('\n')[0]?.slice(0, 20) || '',
     });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/* ========== 章节版本回滚（草稿箱） ========== */
+bookRouter.get('/chapter-history', (req, res) => {
+  try {
+    const bookId = safeBookId(String(req.query.bookId || ''));
+    const chapterNumber = Number(req.query.chapterNumber);
+    if (!bookId || !chapterNumber) return res.status(400).json({ ok: false, error: '缺少 bookId/chapterNumber' });
+    res.json({ ok: true, versions: listChapterHistory(bookId, chapterNumber) });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+bookRouter.post('/chapter-restore', (req, res) => {
+  try {
+    const bookId = safeBookId(req.body?.bookId);
+    const chapterNumber = Number(req.body?.chapterNumber);
+    const version = String(req.body?.version || '');
+    if (!bookId || !chapterNumber || !version) return res.status(400).json({ ok: false, error: '缺少参数' });
+    const result = restoreChapterFile(bookId, chapterNumber, version);
     res.json(result);
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });

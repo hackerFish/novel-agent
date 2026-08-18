@@ -2,7 +2,7 @@
  * AI 味指数逐句定位（本地确定性，0 token）
  * 对章节逐句评分 AI 味特征，输出指数（0-10）+ 问题句列表
  */
-const SENTENCE_RE = /[^。！？!?…\n]+[。！？!?…]?/g;
+const SENTENCE_RE = /[^。！？!?\n]+[。！？!?]?/g;
 
 const FEATURES = [
   { re: /……/g, label: '省略号滥用', weight: 1.5 },

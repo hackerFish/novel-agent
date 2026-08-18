@@ -1,0 +1,27 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Install server deps
+        working-directory: server
+        run: npm ci --no-fund --no-audit
+      - name: Run unit tests
+        working-directory: server
+        run: npm test
+      - name: Syntax check all sources
+        run: |
+          for f in server/src/**/*.js server/src/*.js; do node --check "$f" || exit 1; done
+          echo "All syntax OK"

@@ -26,7 +26,12 @@ function hardBreakUnpunctuatedRuns(text) {
     const breakAt = (() => {
       for (let i = 12; i < run.length - 4; i += 1) {
         const c = run[i];
-        if ('气光声味色香影'.includes(c)) return i + 1;
+        // 感官名词后断；但避免切断"影子/味儿"等词（后接 子/儿/们 时跳过）
+        if ('气光声味色香影'.includes(c)) {
+          const next = run[i + 1] || '';
+          if ('子儿们'.includes(next)) continue;
+          return i + 1;
+        }
       }
       for (let i = 10; i < run.length - 4; i += 1) {
         const c = run[i];
